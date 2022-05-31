@@ -29,12 +29,16 @@ void setTimer(void);
 
 void brightFilter(BYTE* sourceBGR, BYTE* outBGR);
 void grayFilter(BYTE* sourceBGR, BYTE* outBGR);
+void invertFilter(BYTE* sourceBGR, BYTE* outBGR);
+void sepiaFilter(BYTE* sourceBGR, BYTE* outBGR);
 
 
 void main() {
 	FILE* infile = fopen("C:\\Users\\User\\source\\repos\\Yun531\\cudaEx\\catSample.bmp", "rb");
 	FILE* brightfile = fopen("C:\\Users\\User\\source\\repos\\Yun531\\cudaEx\\brightResult.bmp", "wb");
 	FILE* graytfile = fopen("C:\\Users\\User\\source\\repos\\Yun531\\cudaEx\\grayResult.bmp", "wb");
+	FILE* invertfile = fopen("C:\\Users\\User\\source\\repos\\Yun531\\cudaEx\\invertResult.bmp", "wb");
+	FILE* sepiatfile = fopen("C:\\Users\\User\\source\\repos\\Yun531\\cudaEx\\sepiaResult.bmp", "wb");
 
 	BITMAPFILEHEADER hf;
 	fread(&hf, sizeof(BITMAPFILEHEADER), 1, infile);
@@ -42,18 +46,22 @@ void main() {
 	BITMAPINFOHEADER hInfo;
 	fread(&hInfo, sizeof(BITMAPINFOHEADER), 1, infile);
 
-	BYTE* lpImg = (BYTE*)malloc(hInfo.biSizeImage * sizeof(unsigned char));
+	BYTE* Img = (BYTE*)malloc(hInfo.biSizeImage * sizeof(unsigned char));
 	BYTE* brightImg = (BYTE*)malloc(T_SIZE * sizeof(unsigned char));      //결과값 저장 배열
 	BYTE* grayImg = (BYTE*)malloc(T_SIZE * sizeof(unsigned char));
+	BYTE* invertImg = (BYTE*)malloc(T_SIZE * sizeof(unsigned char));
+	BYTE* sepiaImg = (BYTE*)malloc(T_SIZE * sizeof(unsigned char));
 
 
 
-	fread(lpImg, sizeof(unsigned char), hInfo.biSizeImage, infile);
+	fread(Img, sizeof(unsigned char), hInfo.biSizeImage, infile);
 
 	
 	for(int i = 0; i < SIZE; i++) {
-		brightFilter(&lpImg[i*3], &brightImg[i*3]);
-		grayFilter(&lpImg[i * 3], &grayImg[i * 3]);
+		brightFilter(&Img[i * 3], &brightImg[i * 3]);
+		grayFilter(&Img[i * 3], &grayImg[i * 3]);
+		invertFilter(&Img[i * 3], &invertImg[i * 3]);
+		sepiaFilter(&Img[i * 3], &sepiaImg[i * 3]);
 	}
 
 
@@ -67,12 +75,27 @@ void main() {
 	fseek(graytfile, hf.bfOffBits, SEEK_SET);
 	fwrite(grayImg, sizeof(unsigned char), hInfo.biSizeImage, graytfile);
 
+	fwrite(&hf, sizeof(char), sizeof(BITMAPFILEHEADER), invertfile);         //invert파일 저장
+	fwrite(&hInfo, sizeof(char), sizeof(BITMAPINFOHEADER), invertfile);
+	fseek(invertfile, hf.bfOffBits, SEEK_SET);
+	fwrite(invertImg, sizeof(unsigned char), hInfo.biSizeImage, invertfile);
 
+	fwrite(&hf, sizeof(char), sizeof(BITMAPFILEHEADER), sepiatfile);         //gray파일 저장
+	fwrite(&hInfo, sizeof(char), sizeof(BITMAPINFOHEADER), sepiatfile);
+	fseek(sepiatfile, hf.bfOffBits, SEEK_SET);
+	fwrite(sepiaImg, sizeof(unsigned char), hInfo.biSizeImage, sepiatfile);
+
+	free(Img); free(brightImg); free(grayImg); free(invertImg); free(sepiaImg);
+	
 	fclose(infile);
 	fclose(brightfile);
 	fclose(graytfile);
+	fclose(invertfile);
+	fclose(sepiatfile);
 
 }
+
+
 
 void brightFilter(BYTE* sourceBGR, BYTE* outBGR) {
 	outBGR[0] = (sourceBGR[0] + sourceBGR[0] * .2f) > 255 ? 255 : (sourceBGR[0] + sourceBGR[0] * .2f);
@@ -83,21 +106,29 @@ void brightFilter(BYTE* sourceBGR, BYTE* outBGR) {
 void grayFilter(BYTE* sourceBGR, BYTE* outBGR) {
 	BYTE gray = sourceBGR[0] * .114f + sourceBGR[1] * .587f + sourceBGR[2] * .299f;
 
-	outBGR[0] = gray;
-	outBGR[1] = gray;
-	outBGR[2] = gray;
+	//outBGR[0] = gray;
+	//outBGR[1] = gray;
+	//outBGR[2] = gray;
+
+	outBGR[0] = sourceBGR[0];   //노
+	outBGR[1] = sourceBGR[1];   //분홍
+	outBGR[2] = sourceBGR[2];   //하늘
 }
 
-void brightFilter(BYTE* sourceBGR, BYTE* outBGR) {
-	outBGR[0] = (sourceBGR[0] + sourceBGR[0] * .2f) > 255 ? 255 : (sourceBGR[0] + sourceBGR[0] * .2f);
-	outBGR[1] = (sourceBGR[1] + sourceBGR[1] * .2f) > 255 ? 255 : (sourceBGR[1] + sourceBGR[1] * .2f);
-	outBGR[2] = (sourceBGR[2] + sourceBGR[2] * .2f) > 255 ? 255 : (sourceBGR[2] + sourceBGR[2] * .2f);
+void invertFilter(BYTE* sourceBGR, BYTE* outBGR) {
+	outBGR[0] = 255 - sourceBGR[0];
+	outBGR[1] = 255 - sourceBGR[1];
+	outBGR[2] = 255 - sourceBGR[2];
 }
 
-void brightFilter(BYTE* sourceBGR, BYTE* outBGR) {
-	outBGR[0] = (sourceBGR[0] + sourceBGR[0] * .2f) > 255 ? 255 : (sourceBGR[0] + sourceBGR[0] * .2f);
-	outBGR[1] = (sourceBGR[1] + sourceBGR[1] * .2f) > 255 ? 255 : (sourceBGR[1] + sourceBGR[1] * .2f);
-	outBGR[2] = (sourceBGR[2] + sourceBGR[2] * .2f) > 255 ? 255 : (sourceBGR[2] + sourceBGR[2] * .2f);
+void sepiaFilter(BYTE* sourceBGR, BYTE* outBGR) {
+	BYTE B_temp = sourceBGR[0] * .131f + sourceBGR[1] * .534f + sourceBGR[2] * .272f;
+	BYTE G_temp = sourceBGR[0] * .168f + sourceBGR[1] * .686f + sourceBGR[2] * .349f;
+	BYTE R_temp = sourceBGR[0] * .189f + sourceBGR[1] * .769f + sourceBGR[2] * .393f;
+
+	outBGR[0] = (B_temp > 255) ? 255 : B_temp;
+	outBGR[1] = (G_temp > 255) ? 255 : G_temp;
+	outBGR[2] = (R_temp > 255) ? 255 : R_temp;
 }
 
 
