@@ -28,11 +28,13 @@ DS_timer* timer;
 void setTimer(void);
 
 void brightFilter(BYTE* sourceBGR, BYTE* outBGR);
+void grayFilter(BYTE* sourceBGR, BYTE* outBGR);
 
 
 void main() {
 	FILE* infile = fopen("C:\\Users\\User\\source\\repos\\Yun531\\cudaEx\\catSample.bmp", "rb");
-	FILE* outfile = fopen("C:\\Users\\User\\source\\repos\\Yun531\\cudaEx\\result.bmp", "wb");
+	FILE* brightfile = fopen("C:\\Users\\User\\source\\repos\\Yun531\\cudaEx\\brightResult.bmp", "wb");
+	FILE* graytfile = fopen("C:\\Users\\User\\source\\repos\\Yun531\\cudaEx\\grayResult.bmp", "wb");
 
 	BITMAPFILEHEADER hf;
 	fread(&hf, sizeof(BITMAPFILEHEADER), 1, infile);
@@ -41,25 +43,34 @@ void main() {
 	fread(&hInfo, sizeof(BITMAPINFOHEADER), 1, infile);
 
 	BYTE* lpImg = (BYTE*)malloc(hInfo.biSizeImage * sizeof(unsigned char));
-	BYTE* lpOutImg = (BYTE*)malloc(T_SIZE * sizeof(unsigned char));      //결과값 저장 배열
+	BYTE* brightImg = (BYTE*)malloc(T_SIZE * sizeof(unsigned char));      //결과값 저장 배열
+	BYTE* grayImg = (BYTE*)malloc(T_SIZE * sizeof(unsigned char));
+
 
 
 	fread(lpImg, sizeof(unsigned char), hInfo.biSizeImage, infile);
 
 	
 	for(int i = 0; i < SIZE; i++) {
-		brightFilter(&lpImg[i*3], &lpOutImg[i*3]);
+		brightFilter(&lpImg[i*3], &brightImg[i*3]);
+		grayFilter(&lpImg[i * 3], &grayImg[i * 3]);
 	}
 
 
-	fwrite(&hf, sizeof(char), sizeof(BITMAPFILEHEADER), outfile);         //파일 저장
-	fwrite(&hInfo, sizeof(char), sizeof(BITMAPINFOHEADER), outfile);
-	fseek(outfile, hf.bfOffBits, SEEK_SET);
-	fwrite(lpOutImg, sizeof(unsigned char), hInfo.biSizeImage, outfile);
+	fwrite(&hf, sizeof(char), sizeof(BITMAPFILEHEADER), brightfile);         //bright파일 저장
+	fwrite(&hInfo, sizeof(char), sizeof(BITMAPINFOHEADER), brightfile);
+	fseek(brightfile, hf.bfOffBits, SEEK_SET);
+	fwrite(brightImg, sizeof(unsigned char), hInfo.biSizeImage, brightfile);
+
+	fwrite(&hf, sizeof(char), sizeof(BITMAPFILEHEADER), graytfile);         //gray파일 저장
+	fwrite(&hInfo, sizeof(char), sizeof(BITMAPINFOHEADER), graytfile);
+	fseek(graytfile, hf.bfOffBits, SEEK_SET);
+	fwrite(grayImg, sizeof(unsigned char), hInfo.biSizeImage, graytfile);
 
 
 	fclose(infile);
-	fclose(outfile);
+	fclose(brightfile);
+	fclose(graytfile);
 
 }
 
@@ -68,6 +79,27 @@ void brightFilter(BYTE* sourceBGR, BYTE* outBGR) {
 	outBGR[1] = (sourceBGR[1] + sourceBGR[1] * .2f) > 255 ? 255 : (sourceBGR[1] + sourceBGR[1] * .2f);
 	outBGR[2] = (sourceBGR[2] + sourceBGR[2] * .2f) > 255 ? 255 : (sourceBGR[2] + sourceBGR[2] * .2f);
 }
+
+void grayFilter(BYTE* sourceBGR, BYTE* outBGR) {
+	BYTE gray = sourceBGR[0] * .114f + sourceBGR[1] * .587f + sourceBGR[2] * .299f;
+
+	outBGR[0] = gray;
+	outBGR[1] = gray;
+	outBGR[2] = gray;
+}
+
+void brightFilter(BYTE* sourceBGR, BYTE* outBGR) {
+	outBGR[0] = (sourceBGR[0] + sourceBGR[0] * .2f) > 255 ? 255 : (sourceBGR[0] + sourceBGR[0] * .2f);
+	outBGR[1] = (sourceBGR[1] + sourceBGR[1] * .2f) > 255 ? 255 : (sourceBGR[1] + sourceBGR[1] * .2f);
+	outBGR[2] = (sourceBGR[2] + sourceBGR[2] * .2f) > 255 ? 255 : (sourceBGR[2] + sourceBGR[2] * .2f);
+}
+
+void brightFilter(BYTE* sourceBGR, BYTE* outBGR) {
+	outBGR[0] = (sourceBGR[0] + sourceBGR[0] * .2f) > 255 ? 255 : (sourceBGR[0] + sourceBGR[0] * .2f);
+	outBGR[1] = (sourceBGR[1] + sourceBGR[1] * .2f) > 255 ? 255 : (sourceBGR[1] + sourceBGR[1] * .2f);
+	outBGR[2] = (sourceBGR[2] + sourceBGR[2] * .2f) > 255 ? 255 : (sourceBGR[2] + sourceBGR[2] * .2f);
+}
+
 
 
 
