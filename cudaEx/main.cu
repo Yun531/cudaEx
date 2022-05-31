@@ -106,13 +106,13 @@ void brightFilter(BYTE* sourceBGR, BYTE* outBGR) {
 void grayFilter(BYTE* sourceBGR, BYTE* outBGR) {
 	BYTE gray = sourceBGR[0] * .114f + sourceBGR[1] * .587f + sourceBGR[2] * .299f;
 
-	//outBGR[0] = gray;
-	//outBGR[1] = gray;
-	//outBGR[2] = gray;
+	outBGR[0] = gray;
+	outBGR[1] = gray;
+	outBGR[2] = gray;
 
-	outBGR[0] = sourceBGR[0];   //노
-	outBGR[1] = sourceBGR[1];   //분홍
-	outBGR[2] = sourceBGR[2];   //하늘
+	//outBGR[0] = sourceBGR[0];   //노
+	//outBGR[1] = sourceBGR[1];   //분홍
+	//outBGR[2] = sourceBGR[2];   //하늘
 }
 
 void invertFilter(BYTE* sourceBGR, BYTE* outBGR) {
