@@ -11,7 +11,7 @@
 #include <string.h>
 #include <Windows.h>
 
-
+#define SIZE 600*400
 #define T_SIZE 3*600*400
 
 #define NUM_CPU_THREADS (4)
@@ -27,13 +27,16 @@ DS_timer* timer;
 
 void setTimer(void);
 
+void brightFilter(BYTE* sourceBGR, BYTE* outBGR);
+
 
 void main() {
 	FILE* infile = fopen("C:\\Users\\User\\source\\repos\\Yun531\\cudaEx\\catSample.bmp", "rb");
-	FILE* outfile = fopen("C:\\Users\\User\\source\\repos\\Yun531\\cudaEx\\result.bmp", "ab");
+	FILE* outfile = fopen("C:\\Users\\User\\source\\repos\\Yun531\\cudaEx\\result.bmp", "wb");
 
 	BITMAPFILEHEADER hf;
 	fread(&hf, sizeof(BITMAPFILEHEADER), 1, infile);
+
 	BITMAPINFOHEADER hInfo;
 	fread(&hInfo, sizeof(BITMAPINFOHEADER), 1, infile);
 
@@ -44,10 +47,15 @@ void main() {
 	fread(lpImg, sizeof(unsigned char), hInfo.biSizeImage, infile);
 
 	
+	for(int i = 0; i < SIZE; i++) {
+		brightFilter(&lpImg[i*3], &lpOutImg[i*3]);
+	}
+
 
 	fwrite(&hf, sizeof(char), sizeof(BITMAPFILEHEADER), outfile);         //파일 저장
 	fwrite(&hInfo, sizeof(char), sizeof(BITMAPINFOHEADER), outfile);
-	fwrite(lpImg, sizeof(unsigned char), hInfo.biSizeImage, outfile);
+	fseek(outfile, hf.bfOffBits, SEEK_SET);
+	fwrite(lpOutImg, sizeof(unsigned char), hInfo.biSizeImage, outfile);
 
 
 	fclose(infile);
@@ -55,29 +63,10 @@ void main() {
 
 }
 
-void BGRtoRGB(BYTE* BGR, BYTE* RGB, unsigned int Size) // RGB로 변환 함수
-{
-	for (unsigned int i = 0; i < Size; i = i + 3)
-	{
-		RGB[i] = BGR[i + 2];
-		RGB[i + 1] = BGR[i + 1];
-		RGB[i + 2] = BGR[i];
-	}
-}
-
-void change(BYTE* Image)    // 상하 반전 함수
-{
-	unsigned int i, j, ch;
-	for (i = 0; i < 256 / 2; i++)
-
-		for (j = 0; j < 768; j++)
-		{
-			ch = Image[i * 768 + j];
-			Image[i * 768 + j] = Image[(256 - i - 1) * 768 + j];
-			Image[(256 - i - 1) * 768 + j] = ch;
-
-		}
-
+void brightFilter(BYTE* sourceBGR, BYTE* outBGR) {
+	outBGR[0] = (sourceBGR[0] + sourceBGR[0] * .2f) > 255 ? 255 : (sourceBGR[0] + sourceBGR[0] * .2f);
+	outBGR[1] = (sourceBGR[1] + sourceBGR[1] * .2f) > 255 ? 255 : (sourceBGR[1] + sourceBGR[1] * .2f);
+	outBGR[2] = (sourceBGR[2] + sourceBGR[2] * .2f) > 255 ? 255 : (sourceBGR[2] + sourceBGR[2] * .2f);
 }
 
 
