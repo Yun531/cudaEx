@@ -11,18 +11,10 @@
 #include <string.h>
 #include <Windows.h>
 
+
+#define T_SIZE 3*600*400
+
 #define NUM_CPU_THREADS (4)
-
-#define ROW_SIZE (1024)
-#define K_SIZE (512)
-#define COL_SIZE (1024)
-#define DATA_SIZE (8)  // 4, 2의 경우 active block은 많지만 block당 thread의 수가 적어 성능이 하락한다
-
-#define WORK_LOAD (10)
-
-#define MAT_SIZE_A (ROW_SIZE * K_SIZE)
-#define MAT_SIZE_B (K_SIZE * COL_SIZE)
-#define MAT_SIZE_C (ROW_SIZE * COL_SIZE)
 
 DS_timer* timer;
 
@@ -35,6 +27,71 @@ DS_timer* timer;
 
 void setTimer(void);
 
+
+void main() {
+	FILE* infile = fopen("C:\\Users\\User\\source\\repos\\Yun531\\cudaEx\\catSample.bmp", "rb");
+	FILE* outfile = fopen("C:\\Users\\User\\source\\repos\\Yun531\\cudaEx\\result.bmp", "ab");
+
+	BITMAPFILEHEADER hf;
+	fread(&hf, sizeof(BITMAPFILEHEADER), 1, infile);
+	BITMAPINFOHEADER hInfo;
+	fread(&hInfo, sizeof(BITMAPINFOHEADER), 1, infile);
+
+	BYTE* lpImg = (BYTE*)malloc(hInfo.biSizeImage * sizeof(unsigned char));
+	BYTE* lpOutImg = (BYTE*)malloc(T_SIZE * sizeof(unsigned char));      //결과값 저장 배열
+
+
+	fread(lpImg, sizeof(unsigned char), hInfo.biSizeImage, infile);
+
+	
+
+	fwrite(&hf, sizeof(char), sizeof(BITMAPFILEHEADER), outfile);         //파일 저장
+	fwrite(&hInfo, sizeof(char), sizeof(BITMAPINFOHEADER), outfile);
+	fwrite(lpImg, sizeof(unsigned char), hInfo.biSizeImage, outfile);
+
+
+	fclose(infile);
+	fclose(outfile);
+
+}
+
+void BGRtoRGB(BYTE* BGR, BYTE* RGB, unsigned int Size) // RGB로 변환 함수
+{
+	for (unsigned int i = 0; i < Size; i = i + 3)
+	{
+		RGB[i] = BGR[i + 2];
+		RGB[i + 1] = BGR[i + 1];
+		RGB[i + 2] = BGR[i];
+	}
+}
+
+void change(BYTE* Image)    // 상하 반전 함수
+{
+	unsigned int i, j, ch;
+	for (i = 0; i < 256 / 2; i++)
+
+		for (j = 0; j < 768; j++)
+		{
+			ch = Image[i * 768 + j];
+			Image[i * 768 + j] = Image[(256 - i - 1) * 768 + j];
+			Image[(256 - i - 1) * 768 + j] = ch;
+
+		}
+
+}
+
+
+
+void setTimer(void) {
+	timer = new DS_timer(NUM_TIMER);
+
+	timer->initTimers();
+	timer->setTimerName(TIMER_HOST, "CPU code");
+	timer->setTimerName(TIMER_KERNEL, "Kernel launch");
+	timer->setTimerName(TIMER_KERNEL_SH, "Kernel launch (shared ver)");
+	timer->setTimerName(TIMER_HtoD, "[Data transter] host->device");
+	timer->setTimerName(TIMER_DtoH, "[Data transfer] device->host");
+}
 
 //#define dMemAlloc(_P, _type, _size) cudaMalloc(&_P, sizeof(_type)*_size);
 
@@ -52,33 +109,6 @@ void setTimer(void);
 	}
 }*/
 
-
-/*__global__ void matMul_kernel_shared(float* _A, float* _B, float* _C) {
-	int row = blockIdx.y * blockDim.y + threadIdx.y;
-	int col = blockIdx.x * blockDim.x + threadIdx.x;
-	int index = row * blockDim.x * gridDim.x + col;
-
-	__shared__ float sA[DATA_SIZE][K_SIZE];
-	__shared__ float sB[K_SIZE][DATA_SIZE];
-	__shared__ float sC[DATA_SIZE][DATA_SIZE];
-
-	for (int k = 0; k < K_SIZE; k++) {
-		sA[row % DATA_SIZE][k] = _A[row * K_SIZE + k];
-		sB[k][col % DATA_SIZE] = _B[col + k * COL_SIZE];
-	}
-
-	__syncthreads();
-
-	sC[row % DATA_SIZE][col % DATA_SIZE] = 0;
-	_C[index] = 0;
-	for (int k = 0; k < K_SIZE; k++) {
-		for (int i = 0; i < WORK_LOAD; i++) {
-			sC[row % DATA_SIZE][col % DATA_SIZE] += sA[row % DATA_SIZE][k] * sB[k][col % DATA_SIZE];
-		}
-	}
-	_C[index] = sC[row % DATA_SIZE][col % DATA_SIZE];
-
-}*/
 
 /*void main(void) {
 	timer = NULL; setTimer();
@@ -157,69 +187,3 @@ void setTimer(void);
 
 
 }*/
-
-#define T_SIZE 3*600*400
-
-void main() {
-	FILE* infile = fopen("catSample.bmp", "rb");
-	FILE* outfile = fopen("Lenna_small.raw", "wb");
-
-	BITMAPFILEHEADER hf;
-	fread(&hf, sizeof(BITMAPFILEHEADER), 1, infile);
-
-	BITMAPINFOHEADER hInfo;
-	fread(&hInfo, sizeof(BITMAPINFOHEADER), 1, infile);
-
-	BYTE* lpImg = (BYTE*)malloc(hInfo.biSizeImage * sizeof(unsigned char));
-	BYTE* lpOutImg = (BYTE*)malloc(T_SIZE * sizeof(unsigned char));
-
-	fread(lpImg, sizeof(unsigned char), hInfo.biSizeImage, infile);
-
-	BGRtoRGB(lpImg, lpOutImg, T_SIZE);
-
-	change(lpOutImg);
-
-	fwrite(lpOutImg, sizeof(unsigned char), T_SIZE, outfile);
-
-	fclose(infile);
-	fclose(outfile);
-
-}
-
-void BGRtoRGB(BYTE* BGR, BYTE* RGB, unsigned int Size) // RGB로 변환 함수
-{
-	for (unsigned int i = 0; i < Size; i = i + 3)
-	{
-		RGB[i] = BGR[i + 2];
-		RGB[i + 1] = BGR[i + 1];
-		RGB[i + 2] = BGR[i];
-	}
-}
-
-void change(BYTE* Image)    // 상하 반전 함수
-{
-	unsigned int i, j, ch;
-	for (i = 0; i < 256 / 2; i++)
-
-		for (j = 0; j < 768; j++)
-		{
-			ch = Image[i * 768 + j];
-			Image[i * 768 + j] = Image[(256 - i - 1) * 768 + j];
-			Image[(256 - i - 1) * 768 + j] = ch;
-
-		}
-
-}
-
-
-
-void setTimer(void) {
-	timer = new DS_timer(NUM_TIMER);
-
-	timer->initTimers();
-	timer->setTimerName(TIMER_HOST, "CPU code");
-	timer->setTimerName(TIMER_KERNEL, "Kernel launch");
-	timer->setTimerName(TIMER_KERNEL_SH, "Kernel launch (shared ver)");
-	timer->setTimerName(TIMER_HtoD, "[Data transter] host->device");
-	timer->setTimerName(TIMER_DtoH, "[Data transfer] device->host");
-}
