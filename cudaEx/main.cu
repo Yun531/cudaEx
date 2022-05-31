@@ -1,4 +1,6 @@
-﻿#include "cuda_runtime.h"
+﻿#pragma warning(disable:4996)
+
+#include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 
 #include "DS_timer.h"
@@ -7,6 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <Windows.h>
 
 #define NUM_CPU_THREADS (4)
 
@@ -21,9 +24,6 @@
 #define MAT_SIZE_B (K_SIZE * COL_SIZE)
 #define MAT_SIZE_C (ROW_SIZE * COL_SIZE)
 
-float A[ROW_SIZE][K_SIZE];
-float B[K_SIZE][COL_SIZE];
-
 DS_timer* timer;
 
 #define TIMER_HOST 0
@@ -34,16 +34,12 @@ DS_timer* timer;
 #define NUM_TIMER (TIMER_DtoH + 1)
 
 void setTimer(void);
-void genInputMatrices(void);
-
-float hostC[ROW_SIZE][COL_SIZE];
-float deviceC[ROW_SIZE][COL_SIZE];
-
-#define memsetZero(_P, _type, _size) memset(_P, 0 , sizeof(_type)*_size);
-#define dMemAlloc(_P, _type, _size) cudaMalloc(&_P, sizeof(_type)*_size);
 
 
-__global__ void matMul_kernel(float* _A, float* _B, float* _C) {
+//#define dMemAlloc(_P, _type, _size) cudaMalloc(&_P, sizeof(_type)*_size);
+
+
+/*__global__ void matMul_kernel(float* _A, float* _B, float* _C) {
 	int row = blockIdx.y * blockDim.y + threadIdx.y;
 	int col = blockIdx.x * blockDim.x + threadIdx.x;
 	int index = row * blockDim.x * gridDim.x + col;
@@ -54,10 +50,10 @@ __global__ void matMul_kernel(float* _A, float* _B, float* _C) {
 			_C[index] += _A[row * K_SIZE + k] * _B[col + k * COL_SIZE];
 		}
 	}
-}
+}*/
 
 
-__global__ void matMul_kernel_shared(float* _A, float* _B, float* _C) {
+/*__global__ void matMul_kernel_shared(float* _A, float* _B, float* _C) {
 	int row = blockIdx.y * blockDim.y + threadIdx.y;
 	int col = blockIdx.x * blockDim.x + threadIdx.x;
 	int index = row * blockDim.x * gridDim.x + col;
@@ -82,22 +78,19 @@ __global__ void matMul_kernel_shared(float* _A, float* _B, float* _C) {
 	}
 	_C[index] = sC[row % DATA_SIZE][col % DATA_SIZE];
 
-}
+}*/
 
-void main(void) {
+/*void main(void) {
 	timer = NULL; setTimer();
 
 	float* dA, * dB, * dC;
 	dA = dB = dC = NULL;
 
-	memsetZero(A, float, MAT_SIZE_A); memsetZero(B, float, MAT_SIZE_B);
-	memsetZero(hostC, float, MAT_SIZE_C); memsetZero(deviceC, float, MAT_SIZE_C);
 
 	dMemAlloc(dA, float, MAT_SIZE_A);
 	dMemAlloc(dB, float, MAT_SIZE_B);
 	dMemAlloc(dC, float, MAT_SIZE_C);
 
-	genInputMatrices();
 
 	timer->onTimer(TIMER_HOST);
 	for (int r = 0; r < ROW_SIZE; r++) {
@@ -163,21 +156,62 @@ void main(void) {
 
 
 
+}*/
+
+#define T_SIZE 3*600*400
+
+void main() {
+	FILE* infile = fopen("catSample.bmp", "rb");
+	FILE* outfile = fopen("Lenna_small.raw", "wb");
+
+	BITMAPFILEHEADER hf;
+	fread(&hf, sizeof(BITMAPFILEHEADER), 1, infile);
+
+	BITMAPINFOHEADER hInfo;
+	fread(&hInfo, sizeof(BITMAPINFOHEADER), 1, infile);
+
+	BYTE* lpImg = (BYTE*)malloc(hInfo.biSizeImage * sizeof(unsigned char));
+	BYTE* lpOutImg = (BYTE*)malloc(T_SIZE * sizeof(unsigned char));
+
+	fread(lpImg, sizeof(unsigned char), hInfo.biSizeImage, infile);
+
+	BGRtoRGB(lpImg, lpOutImg, T_SIZE);
+
+	change(lpOutImg);
+
+	fwrite(lpOutImg, sizeof(unsigned char), T_SIZE, outfile);
+
+	fclose(infile);
+	fclose(outfile);
+
 }
 
-void genInputMatrices(void) {
-	for (int r = 0; r < ROW_SIZE; r++) {
-		for (int k = 0; k < K_SIZE; k++) {
-			A[r][k] = (float)(rand() % 100) / 100;
-		}
-	}
-
-	for (int k = 0; k < K_SIZE; k++) {
-		for (int c = 0; c < COL_SIZE; c++) {
-			B[k][c] = (float)(rand() % 100) / 100;
-		}
+void BGRtoRGB(BYTE* BGR, BYTE* RGB, unsigned int Size) // RGB로 변환 함수
+{
+	for (unsigned int i = 0; i < Size; i = i + 3)
+	{
+		RGB[i] = BGR[i + 2];
+		RGB[i + 1] = BGR[i + 1];
+		RGB[i + 2] = BGR[i];
 	}
 }
+
+void change(BYTE* Image)    // 상하 반전 함수
+{
+	unsigned int i, j, ch;
+	for (i = 0; i < 256 / 2; i++)
+
+		for (j = 0; j < 768; j++)
+		{
+			ch = Image[i * 768 + j];
+			Image[i * 768 + j] = Image[(256 - i - 1) * 768 + j];
+			Image[(256 - i - 1) * 768 + j] = ch;
+
+		}
+
+}
+
+
 
 void setTimer(void) {
 	timer = new DS_timer(NUM_TIMER);
