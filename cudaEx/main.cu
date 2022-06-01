@@ -11,8 +11,8 @@
 #include <string.h>
 #include <Windows.h>
 
-#define SIZE 600*400
-#define T_SIZE 3*SIZE
+//#define SIZE 600*400*4*4
+//#define T_SIZE 3*SIZE
 
 #define NUM_CPU_THREADS (8)
 
@@ -28,6 +28,7 @@ DS_timer* timer;
 
 #define dMemAlloc(_P, _type, _size) cudaMalloc(&_P, sizeof(_type)*_size);
 
+
 void setTimer(void);
 
 void brightFilter(BYTE* sourceBGR, BYTE* outBGR);
@@ -36,7 +37,7 @@ void grayFilter(BYTE* sourceBGR, BYTE* outBGR);
 void invertFilter(BYTE* sourceBGR, BYTE* outBGR);
 
 
-__global__ void imageFilter(unsigned char* dImg, unsigned char* dBrightImg, unsigned char* dDarkImg, unsigned char* dGrayImg, unsigned char* dInvertImg) {
+__global__ void imageFilter(unsigned char* dImg, unsigned char* dBrightImg, unsigned char* dDarkImg, unsigned char* dGrayImg, unsigned char* dInvertImg, int SIZE) {
 	int index = blockIdx.y*(gridDim.x*blockDim.x*blockDim.y*blockDim.z) + blockIdx.x*(blockDim.x*blockDim.y*blockDim.z) + threadIdx.x;
 	if (index > SIZE) {
 		return;
@@ -61,7 +62,7 @@ __global__ void imageFilter(unsigned char* dImg, unsigned char* dBrightImg, unsi
 	dInvertImg[index + 2] = 255 - dImg[index + 2];
 }
 
-__global__ void imageFilterShared(unsigned char* dImg, unsigned char* dBrightImg, unsigned char* dDarkImg, unsigned char* dGrayImg, unsigned char* dInvertImg) {
+__global__ void imageFilterShared(unsigned char* dImg, unsigned char* dBrightImg, unsigned char* dDarkImg, unsigned char* dGrayImg, unsigned char* dInvertImg, int SIZE) {
 	int temp;
 	int index = blockIdx.y * (gridDim.x * blockDim.x * blockDim.y * blockDim.z) + blockIdx.x * (blockDim.x * blockDim.y * blockDim.z) + threadIdx.x;
 	
@@ -98,8 +99,23 @@ __global__ void imageFilterShared(unsigned char* dImg, unsigned char* dBrightImg
 
 void main() {
 	timer = NULL; setTimer();
-
-	FILE* infile = fopen("C:\\Users\\User\\source\\repos\\Yun531\\cudaEx\\catSample.bmp", "rb");			//작업을 진행할 bmp파일(사진선택할 때 경로 재지정)
+	
+	int mode;
+	FILE* infile = NULL;
+	printf("필터를 적용할 사진을 선택하십시오. ('1' or '2')\n> ");
+	scanf(" %d", &mode);
+	if (mode == 1) {
+		infile = fopen("C:\\Users\\User\\source\\repos\\Yun531\\cudaEx\\catSample.bmp", "rb");			//작업을 진행할 bmp파일(파일명*경로 재지정)
+	}
+	else if(mode == 2) {
+		infile = fopen("C:\\Users\\User\\source\\repos\\Yun531\\cudaEx\\scenery.bmp", "rb");		//작업을 진행할 bmp파일(파일명*경로 재지정)
+	}
+	else {
+		printf("\n잘못된 입력입니다.\n");
+		printf("실행을 종료합니다.\n");
+		return;
+	}
+	
 	FILE* brightfile = fopen("C:\\Users\\User\\source\\repos\\Yun531\\cudaEx\\brightResult.bmp", "wb");
 	FILE* darkfile = fopen("C:\\Users\\User\\source\\repos\\Yun531\\cudaEx\\darkResult.bmp", "wb");
 	FILE* grayfile = fopen("C:\\Users\\User\\source\\repos\\Yun531\\cudaEx\\grayResult.bmp", "wb");
@@ -114,6 +130,9 @@ void main() {
 	fseek(infile, hf.bfOffBits, SEEK_SET);
 	fread(Img, sizeof(unsigned char), hInfo.biSizeImage, infile);
 
+	int SIZE = hInfo.biWidth * hInfo.biHeight;
+	int T_SIZE = 3 * SIZE;
+
 	BYTE* brightImg = (BYTE*)malloc(T_SIZE * sizeof(unsigned char));			//CPU결과값 저장 공간
 	BYTE* darkImg = (BYTE*)malloc(T_SIZE * sizeof(unsigned char));
 	BYTE* grayImg = (BYTE*)malloc(T_SIZE * sizeof(unsigned char));
@@ -124,8 +143,10 @@ void main() {
 	BYTE* openmpgrayImg = (BYTE*)malloc(T_SIZE * sizeof(unsigned char));
 	BYTE* openmpinvertImg = (BYTE*)malloc(T_SIZE * sizeof(unsigned char));
 
+
 	unsigned char * dImg, * dBrightImg, * dDarkImg, * dGrayImg, * dInvertImg;			//device결과값 저장 공간
 	dImg = dBrightImg = dDarkImg = dGrayImg = dInvertImg = NULL;
+
 
 	dMemAlloc(dImg, unsigned char, T_SIZE);
 	dMemAlloc(dBrightImg, unsigned char, T_SIZE);
@@ -179,12 +200,12 @@ void main() {
 	timer->offTimer(TIMER_HtoD);														//HtoD(종료)
 	
 	timer->onTimer(TIMER_KERNEL);						//device버전(시작)
-	imageFilter << <gridDim1, blockDim1 >> > (dImg, dBrightImg, dDarkImg, dGrayImg, dInvertImg);
+	imageFilter << <gridDim1, blockDim1 >> > (dImg, dBrightImg, dDarkImg, dGrayImg, dInvertImg, SIZE);
 	cudaThreadSynchronize();
 	timer->offTimer(TIMER_KERNEL);						//device버전(종료)
 
 	timer->onTimer(TIMER_KERNEL_SH);						//deviceShared버전(시작)
-	imageFilterShared << <gridDim1, blockDim1 >> > (dImg, dBrightImg, dDarkImg, dGrayImg, dInvertImg);
+	imageFilterShared << <gridDim1, blockDim1 >> > (dImg, dBrightImg, dDarkImg, dGrayImg, dInvertImg, SIZE);
 	cudaThreadSynchronize();
 	timer->offTimer(TIMER_KERNEL_SH);						//deviceShared버전(종료)
 
@@ -248,6 +269,7 @@ void main() {
 
 	free(Img); free(brightImg); free(grayImg); free(invertImg); free(darkImg);
 	free(openmpbrightImg); free(openmpgrayImg); free(openmpinvertImg); free(openmpdarkImg);
+	cudaFree(dImg); cudaFree(dBrightImg); cudaFree(dGrayImg); cudaFree(dInvertImg); cudaFree(dDarkImg);
 	
 	fclose(infile);
 	fclose(brightfile);
