@@ -203,16 +203,13 @@ void main() {
 	for (temp = 0; temp < SIZE; temp++) {
 		int k = temp * 3;
 		if ((openmpbrightImg[k] != brightImg[k]) || (openmpdarkImg[k] != darkImg[k]) || (openmpgrayImg[k] != grayImg[k]) || (openmpinvertImg[k] != invertImg[k])) {
-			printf("%d / (devicd:CPU) / (%d,%d), (%d,%d), (%d,%d), (%d,%d)\n", k, openmpbrightImg[k], brightImg[k], openmpdarkImg[k], darkImg[k], openmpgrayImg[k], grayImg[k], openmpinvertImg[k], invertImg[k]);
-			//break;
+			break;
 		}
 		if ((openmpbrightImg[k + 1] != brightImg[k + 1]) || (openmpdarkImg[k + 1] != darkImg[k + 1]) || (openmpgrayImg[k + 1] != grayImg[k + 1]) || (openmpinvertImg[k + 1] != invertImg[k + 1])) {
-			printf("%d / (devicd:CPU) / (%d,%d), (%d,%d), (%d,%d), (%d,%d)\n", k + 1, openmpbrightImg[k + 1], brightImg[k + 1], openmpdarkImg[k + 1], darkImg[k + 1], openmpgrayImg[k + 1], grayImg[k + 1], openmpinvertImg[k + 1], invertImg[k + 1]);
-			//break;
+			break;
 		}
 		if ((openmpbrightImg[k + 2] != brightImg[k + 2]) || (openmpdarkImg[k + 2] != darkImg[k + 2]) || (openmpgrayImg[k + 2] != grayImg[k + 2]) || (openmpinvertImg[k + 2] != invertImg[k + 2])) {
-			printf("%d / (devicd:CPU) / (%d,%d), (%d,%d), (%d,%d), (%d,%d)\n", k + 2, openmpbrightImg[k + 2], brightImg[k + 2], openmpdarkImg[k + 2], darkImg[k + 2], openmpgrayImg[k + 2], grayImg[k + 2], openmpinvertImg[k + 2], invertImg[k + 2]);
-			//break;
+			break;
 		}
 	}
 	if (temp == SIZE)
