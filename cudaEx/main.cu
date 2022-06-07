@@ -104,13 +104,24 @@ void main() {
 	FILE* infile = NULL;
 	printf("필터를 적용할 사진을 선택하십시오. ('1' or '2')\n> ");
 	scanf(" %d", &mode);
-	if (mode == 1) {
-		infile = fopen("C:\\Users\\User\\source\\repos\\Yun531\\cudaEx\\catSample.bmp", "rb");			//작업을 진행할 bmp파일(파일명*경로 재지정)
-	}
-	else if(mode == 2) {
-		infile = fopen("C:\\Users\\User\\source\\repos\\Yun531\\cudaEx\\scenery.bmp", "rb");		//작업을 진행할 bmp파일(파일명*경로 재지정)
-	}
-	else {
+	switch (mode) {
+	case 1:
+		printf("600*400 pixel\n");
+		infile = fopen("C:\\Users\\User\\source\\repos\\Yun531\\cudaEx\\catSample.bmp", "rb");
+		break;
+	case 2:
+		printf("2400*1600 pixel\n");
+		infile = fopen("C:\\Users\\User\\source\\repos\\Yun531\\cudaEx\\scenery.bmp", "rb");
+		break;
+	case 3:
+		printf("3840*2160 pixel\n");
+		infile = fopen("C:\\Users\\User\\source\\repos\\Yun531\\cudaEx\\wave.bmp", "rb");
+		break;
+	case 4:
+		printf("7680*4320 pixel\n");
+		infile = fopen("C:\\Users\\User\\source\\repos\\Yun531\\cudaEx\\nature.bmp", "rb");
+		break;
+	default:
 		printf("\n잘못된 입력입니다.\n");
 		printf("실행을 종료합니다.\n");
 		return;
